@@ -1,0 +1,24 @@
+{
+  "name": "PHP Dev Container",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash"
+      }
+    }
+  },
+//   "settings": {
+//     "terminal.integrated.shell.linux": "/bin/bash"
+//   },
+//   "extensions": [
+//     "felixfbecker.php-debug",
+//     "bmewburn.vscode-intelephense-client"
+//   ],
+  "forwardPorts": [8080, 3306],
+  "postStartCommand": "sudo apachectl start",
+  "postCreateCommand": "sudo chmod a+x \"$(pwd)\" && sudo rm -rf /var/www/html && sudo ln -s \"$(pwd)\" /var/www/html",
+  "remoteUser": "vscode"
+}
