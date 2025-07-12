@@ -18,7 +18,7 @@
 //     "bmewburn.vscode-intelephense-client"
 //   ],
   "forwardPorts": [3306, 80],
-  "postAttachCommand": "sudo php -S 0.0.0.0:8080",
+  // "postAttachCommand": "sudo php -S 0.0.0.0:8080",
   "postCreateCommand": "sudo chmod a+x ./.devcontainer/postCreateCommand.sh && ./.devcontainer/postCreateCommand.sh",
   "remoteUser": "vscode"
 }
