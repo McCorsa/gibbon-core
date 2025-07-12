@@ -1,0 +1,33 @@
+services:
+  php:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+    restart: unless-stopped
+  
+  db:
+    image: mariadb
+    restart: always
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    environment:
+      MARIADB_ROOT_PASSWORD: mariadb
+      MARIADB_DATABASE: mariadb
+      MARIADB_USER: mariadb
+      MARIADB_PASSWORD: mariadb
+  
+  phpmyadmin:
+    image: phpmyadmin
+    restart: always
+    ports:
+      - "3307:80"
+    links:
+      - db:db
+    environment:
+      PMA_USER: root
+      PMA_PASSWORD: mariadb
+
+volumes:
+  mariadb-data:
