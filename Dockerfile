@@ -18,7 +18,6 @@ RUN apt-get update
 RUN install-php-extensions gettext gd intl zip pdo_mysql
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-# RUN composer install
 
 RUN echo "max_input_vars = 8000\nupload_max_filesize = 50M\npost_max_size = 51M;" > /usr/local/etc/php/conf.d/gibbon.ini
 

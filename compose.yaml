@@ -6,6 +6,7 @@ services:
     volumes:
       - .:/var/www/html
     restart: unless-stopped
+    command: sh -c "composer install && apache2-foreground"
   
   db:
     image: mariadb
