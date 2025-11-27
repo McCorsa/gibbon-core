@@ -128,6 +128,7 @@ if (isActionAccessible($guid, $connection2, '/modules/Planner/planner_edit.php')
             } else {
                 //Let's go!
                 $values = $result->fetch();
+                $fields = !empty($values['fields'])? json_decode($values['fields'], true) : [];
 
                 if ($viewBy == 'date') {
                     $extra = Format::date($date);
@@ -156,14 +157,27 @@ if (isActionAccessible($guid, $connection2, '/modules/Planner/planner_edit.php')
                     $gibbonUnitClassID = $rowUnitClass['gibbonUnitClassID'];
                 }
 
+                $dataMarkbook = array('gibbonPlannerEntryID' => $gibbonPlannerEntryID);
+                $sqlMarkbook = 'SELECT mb.gibbonMarkbookColumnID FROM gibbonMarkbookColumn AS mb WHERE :gibbonPlannerEntryID=mb.gibbonPlannerEntryID';
+                $gibbonMarkbookColumnID = $pdo->selectOne($sqlMarkbook, $dataMarkbook);
+
                 $returns = array();
                 $returns['success1'] = __('Your request was completed successfully.').__('You can now edit more details of your newly duplicated entry.');
                 $page->return->addReturns($returns);
 
                 $form = Form::create('action', $session->get('absoluteURL').'/modules/'.$session->get('module')."/planner_editProcess.php?gibbonPlannerEntryID=$gibbonPlannerEntryID&viewBy=$viewBy&subView=$subView&address=".$session->get('address'));
                 $form->setFactory(PlannerFormFactory::create($pdo));
+                $form->addMeta()->addDefaultContent('editProcess');
 
                 $form->addHiddenValue('address', $session->get('address'));
+                
+                if (!empty($gibbonMarkbookColumnID)) {
+                    $form->addHeaderAction('markbook', __('Linked Markbook'))
+                        ->setURL('/modules/Markbook/markbook_edit_data.php')
+                        ->addParam('gibbonMarkbookColumnID', $gibbonMarkbookColumnID)
+                        ->addParams($params)
+                        ->displayLabel();
+                }
                 
                 $params["gibbonPlannerEntryID"] = $gibbonPlannerEntryID;
                 $form->addHeaderAction('view', __('View'))
@@ -172,6 +186,7 @@ if (isActionAccessible($guid, $connection2, '/modules/Planner/planner_edit.php')
                     ->setIcon('plus')
                     ->displayLabel();
 
+                
                 //BASIC INFORMATION
                 $form->addRow()->addHeading('Basic Information', __('Basic Information'));
 
@@ -327,11 +342,8 @@ if (isActionAccessible($guid, $connection2, '/modules/Planner/planner_edit.php')
                 // MARKBOOK
                 $form->addRow()->addHeading(__('Markbook'));
                 // Check database for a linked markbook column
-                $data = array('gibbonPlannerEntryID' => $gibbonPlannerEntryID);
-                $sql = 'SELECT mb.gibbonMarkbookColumnID FROM gibbonMarkbookColumn AS mb WHERE :gibbonPlannerEntryID=mb.gibbonPlannerEntryID';
-                $result = $connection2->prepare($sql);
-                $result->execute($data);
-                if ($result->rowCount() != 0) {
+                
+                if (!empty($gibbonMarkbookColumnID)) {
                     $row = $form->addRow();
                     $row->addLabel('markbook', __('Markbook Column Already Created'))->description(__('A Markbook column has already been created for this assignment.'));
                 } else {
@@ -372,12 +384,16 @@ if (isActionAccessible($guid, $connection2, '/modules/Planner/planner_edit.php')
                 $form->addRow()->addHeading('Access', __('Access'));
 
                 $row = $form->addRow();
-                    $row->addLabel('viewableStudents', __('Viewable to Students'));
+                    $row->addLabel('viewableStudents', __('Viewable by Students'));
                     $row->addYesNo('viewableStudents')->required();
 
                 $row = $form->addRow();
-                    $row->addLabel('viewableParents', __('Viewable to Parents'));
+                    $row->addLabel('viewableParents', __('Viewable by Parents'));
                     $row->addYesNo('viewableParents')->required();
+
+                $row = $form->addRow()->addClass('advanced');
+                    $row->addLabel('videoLink', __('Online Lesson'))->description(__('Displays a video link for online lessons'));
+                    $row->addURL('videoLink')->setValue($fields['videoLink'] ?? '');
 
                 //Guests
                 $form->addRow()->addHeading('Guests', __('Current Guests'));

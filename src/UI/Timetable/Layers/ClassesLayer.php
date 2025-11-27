@@ -80,8 +80,7 @@ class ClassesLayer extends AbstractTimetableLayer
 
     protected function loadItemsByPerson(\DatePeriod $dateRange, TimetableContext $context) 
     {
-        $specialDays = $this->specialDayGateway->selectSpecialDaysByDateRange($dateRange->getStartDate()->format('Y-m-d'), $dateRange->getEndDate()->format('Y-m-d'))->fetchGroupedUnique();
-
+        $specialDays = $context->get('specialDays', []);
         $offTimetable = array_reduce($specialDays, function ($group, $item) use ($context) {
             $group[$item['date']] = $this->specialDayGateway->getIsStudentOffTimetableByDate($context->get('gibbonSchoolYearID'), $context->get('gibbonPersonID'), $item['date']) ? $item['name'] : '';
 
@@ -104,6 +103,8 @@ class ClassesLayer extends AbstractTimetableLayer
         foreach ($classes as $class) {
             $teachers = $classTeachers[$class['gibbonTTDayRowClassID']] ?? [];
             $specialDay = $specialDays[$class['date']] ?? [];
+
+            if (!empty($specialDay['cancelClasses']) && $specialDay['cancelClasses'] == 'Y') continue;
 
             $item = $this->createItem($class['date'])->loadData([
                 'type'          => __('Class'),
@@ -157,34 +158,62 @@ class ClassesLayer extends AbstractTimetableLayer
                     'iconClass' => !empty($person) ? 'text-pink-500 hover:text-pink-800' : 'text-gray-600 hover:text-gray-800',
                 ]);
             }
-            
-            // Add buttons to access or create lesson plans
-            $planner = $lessons[$class['lessonID']] ?? [];
-            if ($canViewLessons && !empty($planner)) {
-                $item->set('primaryAction', [
-                    'name'      => 'view',
-                    'label'     => __('Lesson planned: {name}',['name' => htmlPrep($planner['name'])]),
-                    'url'       => Url::fromModuleRoute('Planner', 'planner_view_full')->withQueryParams(['viewBy' => 'class', 'gibbonCourseClassID' => $planner['gibbonCourseClassID'], 'gibbonPlannerEntryID' => $planner['gibbonPlannerEntryID'], 'search' => $context->get('gibbonPersonID')]),
-                    'icon'      => 'check',
-                    'iconClass' => 'text-blue-500 hover:text-blue-800',
-                ]);
 
+            $planner = $lessons[$class['lessonID']] ?? [];
+            if (!empty($planner)) {
                 unset($lessons[$class['lessonID']]);
             }
-            if ($canAddLessons && empty($planner)) {
-                $item->set('primaryAction', [
-                    'name'      => 'add',
-                    'label'     => __('Add lesson plan'),
-                    'url'       => Url::fromModuleRoute('Planner', 'planner_add')->withQueryParams(['viewBy' => 'class', 'gibbonCourseClassID' => $class['gibbonCourseClassID'], 'date' => $class['date'], 'timeStart' => $class['timeStart'], 'timeEnd' => $class['timeEnd']]),
-                    'icon'      => 'add',
-                    'iconClass' => 'text-gray-600 hover:text-gray-800',
-                ]);
+            
+            if ($context->get('edit')) {
+                // Add timetable-editing buttons for Edit mode
+                $canEditTimetable = Access::allows('Timetable Admin', 'courseEnrolment_manage_byPerson_edit');
+                if ($canEditTimetable && $class['date'] >= date('Y-m-d')) {
+                    $item->set('primaryAction', [
+                        'name'      => 'change',
+                        'label'     => __('Add Facility Change'),
+                        'url'       => Url::fromModuleRoute('Timetable', 'spaceChange_manage_add')->withQueryParams(['step' => '2', 'gibbonTTDayRowClassID' => $class['gibbonTTDayRowClassID'].'-'.$class['date'], 'gibbonCourseClassID' => $class['gibbonCourseClassID'], 'source' => $context->get('gibbonSpaceID')]),
+                        'icon'      => 'next',
+                        'iconClass' => 'text-gray-600 hover:text-gray-800',
+                    ]);
+                }
+
+                if ($canEditTimetable) {
+                    $item->set('secondaryAction', [
+                        'name'      => 'edit',
+                        'label'     => __('Add Exception'),
+                        'url'       => Url::fromModuleRoute('Timetable Admin', 'tt_edit_day_edit_class_exception_addProcess')->withQueryParams(['gibbonSchoolYearID' => $context->get('gibbonSchoolYearID'), 'gibbonTTID' => $class['gibbonTTID'], 'gibbonTTDayID' => $class['gibbonTTDayID'], 'gibbonTTDayRowClassID' => $class['gibbonTTDayRowClassID'], 'gibbonTTColumnRowID' => $class['gibbonTTColumnRowID'], 'gibbonCourseClassID' => $class['gibbonCourseClassID'], 'gibbonPersonID' => $context->get('gibbonPersonID')])->directLink(),
+                        'icon'      => 'user-minus',
+                        'iconClass' => 'text-gray-600 hover:text-gray-800',
+                    ]);
+                }
+            } else {
+                // Add buttons to access or create lesson plans
+                if ($canViewLessons && !empty($planner)) {
+                    $item->set('primaryAction', [
+                        'name'      => 'view',
+                        'label'     => __('Lesson planned: {name}',['name' => htmlPrep($planner['name'])]),
+                        'url'       => Url::fromModuleRoute('Planner', 'planner_view_full')->withQueryParams(['viewBy' => 'class', 'gibbonCourseClassID' => $planner['gibbonCourseClassID'], 'gibbonPlannerEntryID' => $planner['gibbonPlannerEntryID'], 'search' => $context->get('gibbonPersonID')]),
+                        'icon'      => 'check',
+                        'iconClass' => 'text-blue-500 hover:text-blue-800',
+                    ]);
+                }
+                if ($canAddLessons && empty($planner)) {
+                    $item->set('primaryAction', [
+                        'name'      => 'add',
+                        'label'     => __('Add lesson plan'),
+                        'url'       => Url::fromModuleRoute('Planner', 'planner_add')->withQueryParams(['viewBy' => 'class', 'gibbonCourseClassID' => $class['gibbonCourseClassID'], 'date' => $class['date'], 'timeStart' => $class['timeStart'], 'timeEnd' => $class['timeEnd']]),
+                        'icon'      => 'add',
+                        'iconClass' => 'text-gray-600 hover:text-gray-800',
+                    ]);
+                }
             }
+            
             
         }
 
         foreach ($lessons as $lesson) {
-            $specialDay = $specialDays[$class['date']] ?? [];
+            $specialDay = $specialDays[$lesson['date']] ?? [];
+            if (!empty($specialDay['cancelClasses']) && $specialDay['cancelClasses'] == 'Y') continue;
 
             $item = $this->createItem($lesson['date'])->loadData([
                 'type'          => __('Lesson'),
@@ -238,7 +267,7 @@ class ClassesLayer extends AbstractTimetableLayer
 
     public function loadItemsByFacility(\DatePeriod $dateRange, TimetableContext $context) 
     {
-        $specialDays = $this->specialDayGateway->selectSpecialDaysByDateRange($dateRange->getStartDate()->format('Y-m-d'), $dateRange->getEndDate()->format('Y-m-d'))->fetchGroupedUnique();
+        $specialDays = $context->get('specialDays', []);
 
         $classes = $this->timetableDayDateGateway->selectTimetabledPeriodsByFacilityAndDateRange($context->get('gibbonSpaceID'), $dateRange->getStartDate()->format('Y-m-d'), $dateRange->getEndDate()->format('Y-m-d'))->fetchAll();
 
@@ -251,6 +280,7 @@ class ClassesLayer extends AbstractTimetableLayer
 
         foreach ($classes as $class) {
             $specialDay = $specialDays[$class['date']] ?? [];
+            if (!empty($specialDay['cancelClasses']) && $specialDay['cancelClasses'] == 'Y') continue;
 
             $teachers = $classTeachers[$class['gibbonTTDayRowClassID']] ?? [];
 

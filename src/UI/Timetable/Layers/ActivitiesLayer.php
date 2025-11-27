@@ -23,9 +23,12 @@ namespace Gibbon\UI\Timetable\Layers;
 
 use Gibbon\Http\Url;
 use Gibbon\Support\Facades\Access;
+use Gibbon\UI\Timetable\TimetableItem;
 use Gibbon\UI\Timetable\TimetableContext;
 use Gibbon\Domain\System\SettingGateway;
 use Gibbon\Domain\Activities\ActivityGateway;
+use Gibbon\Domain\Staff\StaffCoverageGateway;
+use Gibbon\Services\Format;
 
 /**
  * Timetable UI: ActivitiesLayer
@@ -37,11 +40,13 @@ class ActivitiesLayer extends AbstractTimetableLayer
 {
     protected $activityGateway;
     protected $settingGateway;
+    protected $staffCoverageGateway;
 
-    public function __construct(SettingGateway $settingGateway, ActivityGateway $activityGateway)
+    public function __construct(SettingGateway $settingGateway, ActivityGateway $activityGateway, StaffCoverageGateway $staffCoverageGateway)
     {
         $this->activityGateway = $activityGateway;
         $this->settingGateway = $settingGateway;
+        $this->staffCoverageGateway = $staffCoverageGateway;
 
         $this->name = 'Activities';
         $this->color = 'purple';
@@ -58,6 +63,7 @@ class ActivitiesLayer extends AbstractTimetableLayer
         if (!$context->has('gibbonSchoolYearID')) return;
     
         $dateType = $this->settingGateway->getSettingByScope('Activities', 'dateType');
+        $specialDays = $context->get('specialDays', []);
 
         if ($context->has('gibbonPersonID')) {
             $activityList = $this->activityGateway->selectActiveEnrolledActivities($context->get('gibbonSchoolYearID'), $context->get('gibbonPersonID'), $dateType, $dateRange->getStartDate()->format('Y-m-d'))->fetchAll();
@@ -70,13 +76,18 @@ class ActivitiesLayer extends AbstractTimetableLayer
         foreach ($dateRange as $dateObject) {
             $date = $dateObject->format('Y-m-d');
             $weekday = $dateObject->format('l');
+            $specialDay = $specialDays[$date] ?? [];
+
+            if (!empty($specialDay['cancelActivities']) && $specialDay['cancelActivities'] == 'Y') continue;
+
             foreach ($activityList as $activity) {
                 // Add activities that match the weekday and the school is open
                 if (empty($activity['dayOfWeek']) || $activity['dayOfWeek'] != $weekday) continue;
                 if ($date < $activity['dateStart'] || $date > $activity['dateEnd'] ) continue;
 
                 $this->createItem($date)->loadData([
-                    'type'    => __('Activity'),
+                    'id'        => $activity['gibbonActivitySlotID'],
+                    'type'      => __('Activity'),
                     'title'     => $activity['name'],
                     'subtitle'  => !empty($activity['space'])? $activity['space'] : $activity['locationExternal'] ?? '',
                     'link'      => $canViewActivities ? Url::fromModuleRoute('Activities', 'activities_my') : '',
@@ -86,5 +97,26 @@ class ActivitiesLayer extends AbstractTimetableLayer
 
             }
         }
+    }
+
+    public function updateItem(TimetableItem $item, string $status)
+    {
+        if ($status == 'absent' && Access::allows('Staff', 'coverage_my')) {
+            if ($coverage = $this->staffCoverageGateway->getActivityCoverageByID($item->id, $item->date)) {
+                $description = !empty($coverage['gibbonPersonIDCoverage'])
+                    ? __('Covered by {name}', ['name' => Format::name($coverage['title'], $coverage['preferredName'], $coverage['surname'], 'Staff', false, true)])
+                    : __('Coverage').': '.$coverage['status'];
+
+                $item->set('secondaryAction', [
+                    'name'      => 'cover',
+                    'label'     => $description,
+                    'url'       => Url::fromModuleRoute('Staff', 'coverage_my'),
+                    'icon'      => 'user',
+                    'iconClass' => !empty($coverage['gibbonPersonIDCoverage']) ? 'text-pink-500 hover:text-pink-800' : 'text-gray-600 hover:text-gray-800',
+                ]);
+            }
+        }
+
+        parent::updateItem($item, $status);
     }
 }

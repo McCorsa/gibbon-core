@@ -461,8 +461,8 @@ if (isActionAccessible($guid, $connection2, '/modules/Markbook/markbook_edit_dat
 
                         $col = $row->onlyIf($hasAttainment && $hasRawAttainment)->addColumn();
                         $col->addNumber($count.'-attainmentValueRaw')
-                            ->onlyInteger(false)
-                            ->setClass('inline-block')
+                            ->decimalPlaces(2)
+                            ->setClass('inline-block w-16')
                             ->setValue($student['attainmentValueRaw']);
                         $col->addContent('/ '.floatval($values['attainmentRawMax']))->setClass('inline-block ml-1');
 
@@ -513,7 +513,6 @@ if (isActionAccessible($guid, $connection2, '/modules/Markbook/markbook_edit_dat
                         $row->addDate('completeDate');
 
                     $row = $form->addRow()->addClass('submitRow sticky -bottom-px bg-gray-100 border-t -mt-px mb-px z-50');
-                        $row->addContent(getMaxUpload(true));
                         $row->addSubmit();
 
                     $form->loadAllValuesFrom($values);

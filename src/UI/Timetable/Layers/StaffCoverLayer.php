@@ -27,6 +27,10 @@ use Gibbon\Support\Facades\Access;
 use Gibbon\UI\Timetable\TimetableContext;
 use Gibbon\Domain\Staff\StaffCoverageGateway;
 use Gibbon\Domain\Planner\PlannerEntryGateway;
+use Gibbon\Domain\Activities\ActivityGateway;
+use Gibbon\Domain\Staff\StaffDutyPersonGateway;
+use Gibbon\UI\Timetable\Layers\AbstractTimetableLayer;
+use Gibbon\Domain\School\SchoolYearSpecialDayGateway;
 
 /**
  * Timetable UI: StaffCoverLayer
@@ -38,11 +42,17 @@ class StaffCoverLayer extends AbstractTimetableLayer
 {
     protected $staffCoverageGateway;
     protected $plannerEntryGateway;
+    protected $staffDutyPersonGateway;
+    protected $specialDayGateway;
+    protected $activityGateway;
 
-    public function __construct(StaffCoverageGateway $staffCoverageGateway, PlannerEntryGateway $plannerEntryGateway)
+    public function __construct(StaffCoverageGateway $staffCoverageGateway, PlannerEntryGateway $plannerEntryGateway, StaffDutyPersonGateway $staffDutyPersonGateway, ActivityGateway $activityGateway, SchoolYearSpecialDayGateway $specialDayGateway)
     {
         $this->staffCoverageGateway = $staffCoverageGateway;
         $this->plannerEntryGateway = $plannerEntryGateway;
+        $this->staffDutyPersonGateway = $staffDutyPersonGateway;
+        $this->specialDayGateway = $specialDayGateway;
+        $this->activityGateway = $activityGateway;
 
         $this->name = 'Staff Cover';
         $this->color = 'pink';
@@ -62,17 +72,19 @@ class StaffCoverLayer extends AbstractTimetableLayer
             ->filterBy('status', 'Accepted');
                     
         $staffCoverage = $this->staffCoverageGateway->queryCoverageByPersonCovering($criteria, $context->get('gibbonSchoolYearID'), $context->get('gibbonPersonID'), false);
+        $specialDays = $context->get('specialDays', []);
 
         $canViewPlanner = Access::allows('Planner', 'planner_view_full');
 
         foreach ($staffCoverage as $coverage) {
+            $specialDay = $specialDays[$coverage['date']] ?? [];
             $fullName = !empty($coverage['surnameAbsence']) 
                 ? Format::name($coverage['titleAbsence'], $coverage['preferredNameAbsence'], $coverage['surnameAbsence'], 'Staff', false, true)
                 : Format::name($coverage['titleStatus'], $coverage['preferredNameStatus'], $coverage['surnameStatus'], 'Staff', false, true);
 
             $item = $this->createItem($coverage['date'])->loadData([
                 'type'        => __('Covering'),
-                'title'       => $coverage['contextName'],
+                'title'       => __($coverage['contextName']),
                 'label'       => $coverage['courseName'],
                 'subtitle'    => $coverage['roomName'] ?? '',
                 'description' => __('Covering for {name}', ['name' => $fullName]),
@@ -86,12 +98,39 @@ class StaffCoverLayer extends AbstractTimetableLayer
                 'timeEnd'     => $coverage['timeEnd'],
             ]);
 
+            // Handle Duty Coverage
+            if ($coverage['contextName'] == 'Staff Duty') {
+                $duty = $this->staffDutyPersonGateway->getDutyDetailsByID($coverage['foreignTableID'], ['name', 'nameShort']);
+                $item->set('title', $duty['nameShort'] ?? '');
+                $item->set('label', $duty['name'] ?? '');
+                $item->set('description', __($coverage['contextName']).': '.$item->description);
+            }
+
+            // Handle Activity Coverage
+            if ($coverage['contextName'] == 'Activity') {
+                $activity = $this->activityGateway->getActivityDetailsByID($coverage['foreignTableID']);
+                $item->set('title', $activity['name'] ?? '');
+                $item->set('subtitle', $activity['space'] ?? '');
+                $item->set('description', __($coverage['contextName']).': '.$item->description);
+            }
+
             // Handle room changes
             if (!empty($coverage['spaceChanged'])) {
                 $item->addStatus('spaceChanged')
                     ->set('location', $coverage['roomNameChange'] ?? __('No Facility'))
                     ->set('subtitle', $coverage['roomNameChange'] ?? __('No Facility'))
                     ->set('phone', $coverage['phoneChange']);
+            }
+
+            // Handle off timetable days
+            if (!empty($specialDay) && $specialDay['type'] == 'Off Timetable') {
+                if ($this->specialDayGateway->getIsClassOffTimetableByDate($context->get('gibbonSchoolYearID'), $coverage['gibbonCourseClassID'], $coverage['date'])) {
+                    $item->addStatus('offTimetable')
+                        ->set('type', __('Off Timetable'))
+                        ->set('subtitle', $specialDay['name'])
+                        ->set('style', 'stripe')
+                        ->set('color', 'gray');
+                }
             }
 
             $planner = !empty($coverage['gibbonCourseClassID']) 

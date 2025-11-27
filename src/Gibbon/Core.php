@@ -21,6 +21,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 namespace Gibbon;
 
+use Gibbon\View\Component;
 use Gibbon\Services\Format;
 use Gibbon\Session\SessionFactory;
 use Gibbon\Support\Facades\Facade;
@@ -98,7 +99,8 @@ class Core
 
         Facade::setFacadeContainer($container);
         Format::setupFromSession($this->session);
-
+        Component::setupFromSession($this->session);
+        
         $installType = $this->session->get('installType');
         if (empty($installType) || $installType == 'Production') {
             ini_set('display_errors', 0);
@@ -118,7 +120,7 @@ class Core
     }
 
     /**
-     * Is Gibbon Installed? Based on existance of config.php file
+     * Is Gibbon Installed? Based on existence of config.php file
      *
      * @return   bool
      */
@@ -211,15 +213,17 @@ class Core
         // Otherwise load the config values from global scope
         if (empty($this->config) || !is_array($this->config)) {
             $this->config = [
-                'databaseServer' => $databaseServer ?? '',
-                'databaseUsername' => $databaseUsername ?? 'gibbon',
-                'databasePassword' => $databasePassword ?? '',
-                'databaseName' => $databaseName ?? 'gibbon',
-                'databasePort' => $databasePort ?? 3306,
-                'guid' => $guid ?? null,
-                'caching' => $caching ?? 10,
-                'sessionHandler' => $sessionHandler ?? null,
+                'databaseServer'       => $databaseServer ?? '',
+                'databaseUsername'     => $databaseUsername ?? 'gibbon',
+                'databasePassword'     => $databasePassword ?? '',
+                'databaseName'         => $databaseName ?? 'gibbon',
+                'databasePort'         => $databasePort ?? 3306,
+                'guid'                 => $guid ?? null,
+                'caching'              => $caching ?? 10,
+                'sessionHandler'       => $sessionHandler ?? null,
                 'sessionEncryptionKey' => $sessionEncryptionKey ?? null,
+                'sessionSecure'        => $sessionSecure ?? null,
+                'allowImpersonateUser' => $allowImpersonateUser ?? [],
             ];
         }
     }

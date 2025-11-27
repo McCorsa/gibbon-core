@@ -76,7 +76,12 @@ abstract class AbstractTimetableLayer implements TimetableLayerInterface
         $this->active = $active;
     }
 
-    public function createItem(string $date, bool $allDay = false)
+    public function setOrder(int $order)
+    {
+        $this->order = $order;
+    }
+
+    public function createItem(string $date, bool $allDay = false) : TimetableItem
     {
         $item = new TimetableItem($date, $allDay);
         $this->addItem($item);
@@ -113,6 +118,13 @@ abstract class AbstractTimetableLayer implements TimetableLayerInterface
     {
         foreach ($this->items as $key => $items) {
             $this->items[$key] = array_filter($items, $callback);
+        }
+    }
+
+    public function updateItem(TimetableItem $item, string $status)
+    {
+        if ($status == 'absent') {
+            $item->addStatus('absent')->set('style', 'stripe');
         }
     }
 

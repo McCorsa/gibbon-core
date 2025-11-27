@@ -131,7 +131,7 @@ class ActivityGateway extends QueryableGateway
         $query = $this
             ->newQuery()
             ->cols([
-                'gibbonActivity.gibbonActivityID', 'gibbonActivityCategory.gibbonActivityCategoryID', 'gibbonActivity.name', 'gibbonActivity.type', 'gibbonActivityStudent.status', 'NULL AS role', 'gibbonActivityCategory.name as category', 'gibbonActivityCategory.sequenceNumber', 'NULL AS choices', 'gibbonActivityCategory.accessOpenDate', 'gibbonActivityCategory.accessCloseDate', 'gibbonActivityCategory.accessEnrolmentDate'
+                'gibbonActivity.gibbonActivityID', 'gibbonActivityCategory.gibbonActivityCategoryID', 'gibbonActivity.name', 'gibbonActivity.type', 'gibbonActivityStudent.status', 'NULL AS role', 'gibbonActivityCategory.name as category', 'gibbonActivityCategory.sequenceNumber', 'NULL AS choices', 'gibbonActivityCategory.accessOpenDate', 'gibbonActivityCategory.accessCloseDate', 'gibbonActivityCategory.accessEnrolmentDate', 'gibbonActivityCategory.gibbonYearGroupIDParentRegister'
             ])
             ->from($this->getTableName())
             ->innerJoin('gibbonActivityStudent', 'gibbonActivityStudent.gibbonActivityID=gibbonActivity.gibbonActivityID')
@@ -145,7 +145,7 @@ class ActivityGateway extends QueryableGateway
 
         $query->unionAll()
             ->cols([
-                'gibbonActivity.gibbonActivityID', 'gibbonActivityCategory.gibbonActivityCategoryID', 'gibbonActivity.name', 'gibbonActivity.type', 'NULL AS status', 'gibbonActivityStaff.role AS role', 'gibbonActivityCategory.name as category', 'gibbonActivityCategory.sequenceNumber', 'NULL AS choices', 'gibbonActivityCategory.accessOpenDate', 'gibbonActivityCategory.accessCloseDate', 'gibbonActivityCategory.accessEnrolmentDate'
+                'gibbonActivity.gibbonActivityID', 'gibbonActivityCategory.gibbonActivityCategoryID', 'gibbonActivity.name', 'gibbonActivity.type', 'NULL AS status', 'gibbonActivityStaff.role AS role', 'gibbonActivityCategory.name as category', 'gibbonActivityCategory.sequenceNumber', 'NULL AS choices', 'gibbonActivityCategory.accessOpenDate', 'gibbonActivityCategory.accessCloseDate', 'gibbonActivityCategory.accessEnrolmentDate', 'gibbonActivityCategory.gibbonYearGroupIDParentRegister'
             ])
             ->from($this->getTableName())
             ->innerJoin('gibbonActivityStaff', 'gibbonActivityStaff.gibbonActivityID=gibbonActivity.gibbonActivityID')
@@ -160,7 +160,7 @@ class ActivityGateway extends QueryableGateway
 
         $query->unionAll()
             ->cols([
-                'NULL as gibbonActivityID', 'gibbonActivityCategory.gibbonActivityCategoryID', "NULL as name", 'NULL as type', '"Pending" as status', 'NULL AS role', 'gibbonActivityCategory.name as category', 'gibbonActivityCategory.sequenceNumber', "GROUP_CONCAT(gibbonActivity.name ORDER BY gibbonActivityChoice.choice SEPARATOR ',') AS choices", 'gibbonActivityCategory.accessOpenDate', 'gibbonActivityCategory.accessCloseDate', 'gibbonActivityCategory.accessEnrolmentDate'
+                'NULL as gibbonActivityID', 'gibbonActivityCategory.gibbonActivityCategoryID', "NULL as name", 'NULL as type', '"Pending" as status', 'NULL AS role', 'gibbonActivityCategory.name as category', 'gibbonActivityCategory.sequenceNumber', "GROUP_CONCAT(gibbonActivity.name ORDER BY gibbonActivityChoice.choice SEPARATOR ',') AS choices", 'gibbonActivityCategory.accessOpenDate', 'gibbonActivityCategory.accessCloseDate', 'gibbonActivityCategory.accessEnrolmentDate', 'gibbonActivityCategory.gibbonYearGroupIDParentRegister'
             ])
             ->from('gibbonActivityCategory')
             ->innerJoin('gibbonStudentEnrolment', 'gibbonStudentEnrolment.gibbonSchoolYearID=gibbonActivityCategory.gibbonSchoolYearID')
@@ -187,7 +187,7 @@ class ActivityGateway extends QueryableGateway
             ->newSelect()
             ->from($this->getTableName())
             ->cols([
-                'gibbonActivity.gibbonActivityID', 'gibbonActivity.name', 'gibbonActivity.provider', 'gibbonPerson.gibbonPersonID', 'gibbonActivitySlot.timeStart', 'gibbonActivitySlot.timeEnd', 'gibbonActivitySlot.locationExternal', 'gibbonSpace.name as space', 'gibbonDaysOfWeek.name as dayOfWeek',
+                'gibbonActivity.gibbonActivityID', 'gibbonActivitySlot.gibbonActivitySlotID', 'gibbonActivity.name', 'gibbonActivity.provider', 'gibbonPerson.gibbonPersonID', 'gibbonActivitySlot.timeStart', 'gibbonActivitySlot.timeEnd', 'gibbonActivitySlot.locationExternal', 'gibbonSpace.name as space', 'gibbonDaysOfWeek.name as dayOfWeek',
             ])
             ->innerJoin('gibbonActivitySlot', 'gibbonActivitySlot.gibbonActivityID=gibbonActivity.gibbonActivityID')
             ->leftJoin('gibbonActivityCategory', 'gibbonActivityCategory.gibbonActivityCategoryID=gibbonActivity.gibbonActivityCategoryID')
@@ -218,7 +218,7 @@ class ActivityGateway extends QueryableGateway
         $query->unionAll()
             ->from($this->getTableName())
             ->cols([
-                'gibbonActivity.gibbonActivityID', 'gibbonActivity.name', 'gibbonActivity.provider', 'gibbonPerson.gibbonPersonID', 'gibbonActivitySlot.timeStart', 'gibbonActivitySlot.timeEnd', 'gibbonActivitySlot.locationExternal', 'gibbonSpace.name as space', 'gibbonDaysOfWeek.name as dayOfWeek',
+                'gibbonActivity.gibbonActivityID', 'gibbonActivitySlot.gibbonActivitySlotID', 'gibbonActivity.name', 'gibbonActivity.provider', 'gibbonPerson.gibbonPersonID', 'gibbonActivitySlot.timeStart', 'gibbonActivitySlot.timeEnd', 'gibbonActivitySlot.locationExternal', 'gibbonSpace.name as space', 'gibbonDaysOfWeek.name as dayOfWeek',
             ])
             ->innerJoin('gibbonActivitySlot', 'gibbonActivitySlot.gibbonActivityID=gibbonActivity.gibbonActivityID')
             ->innerJoin('gibbonDaysOfWeek', 'gibbonActivitySlot.gibbonDaysOfWeekID=gibbonDaysOfWeek.gibbonDaysOfWeekID')
@@ -252,7 +252,7 @@ class ActivityGateway extends QueryableGateway
             ->newSelect()
             ->from($this->getTableName())
             ->cols([
-                'gibbonActivity.gibbonActivityID', 'gibbonActivity.name', 'gibbonActivity.provider', 'gibbonSpace.gibbonSpaceID', 'gibbonActivitySlot.timeStart', 'gibbonActivitySlot.timeEnd', 'gibbonActivitySlot.locationExternal', 'gibbonSpace.name as space', 'gibbonDaysOfWeek.name as dayOfWeek',
+                'gibbonActivity.gibbonActivityID', 'gibbonActivitySlot.gibbonActivitySlotID', 'gibbonActivity.name', 'gibbonActivity.provider', 'gibbonSpace.gibbonSpaceID', 'gibbonActivitySlot.timeStart', 'gibbonActivitySlot.timeEnd', 'gibbonActivitySlot.locationExternal', 'gibbonSpace.name as space', 'gibbonDaysOfWeek.name as dayOfWeek',
             ])
             ->innerJoin('gibbonActivitySlot', 'gibbonActivitySlot.gibbonActivityID=gibbonActivity.gibbonActivityID')
             ->innerJoin('gibbonDaysOfWeek', 'gibbonActivitySlot.gibbonDaysOfWeekID=gibbonDaysOfWeek.gibbonDaysOfWeekID')
@@ -339,6 +339,7 @@ class ActivityGateway extends QueryableGateway
                 WHERE gibbonActivity.gibbonActivityCategoryID=:gibbonActivityCategoryID 
                 AND gibbonStudentEnrolment.gibbonPersonID=:gibbonPersonID
                 AND gibbonActivity.active='Y'
+                AND gibbonActivity.registration='Y'
                 ORDER BY gibbonActivity.name, gibbonActivity.programStart";
 
         return $this->db()->select($sql, $data);
@@ -351,10 +352,12 @@ class ActivityGateway extends QueryableGateway
                 gibbonActivity.payment as cost,
                 gibbonActivity.paymentType as costType,
                 gibbonActivity.paymentFirmness as costStatus,
+                gibbonActivity.paymentDescription as costDescription,
                 gibbonActivityType.access,
                 gibbonActivityType.maxPerStudent,
                 gibbonActivityType.enrolmentType,
                 gibbonActivityType.backupChoice,
+                gibbonActivity.registration,
                 gibbonSpace.gibbonSpaceID,
                 gibbonActivitySlot.timeStart,
                 gibbonActivitySlot.timeEnd,
